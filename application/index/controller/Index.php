@@ -75,8 +75,10 @@ class Index extends \think\Controller {
         $notify = new \PayNotifyCallBack();
         $notify->Handle(false);
         $result = $notify->GetValues();
-        if ($result['return_code'] == 'SUCCESS') {
-            //订单支付完成，修改订单状态，发货。
+        if(!empty($result['return_code']) && $result['return_code'] == 'SUCCESS' && !empty($result['return_msg']) && $result['return_msg'] == 'OK')
+        {
+            //订单支付完成，修改订单状态
+            \Log::INFO("Finish Transaction!!!");
         }
         \Log::DEBUG("end notify");
         \Log::INFO(str_repeat("=", 20));

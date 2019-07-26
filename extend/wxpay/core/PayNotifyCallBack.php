@@ -19,21 +19,47 @@ class PayNotifyCallBack extends WxPayNotify {
         return false;
     }
 
-    //重写回调处理函数
-    public function NotifyProcess($data, &$msg) {
+    //重写回调函数
+   public function NotifyProcess($data,&$msg)
+    {
         Log::DEBUG("call back:" . json_encode($data));
         $notfiyOutput = array();
 
-        if (!array_key_exists("transaction_id", $data)) {
-            $msg = "输入参数不正确";
+        // 1.进行参数校验
+        if(!array_key_exists("return_code", $data)
+            ||(array_key_exists("return_code", $data) && $data['return_code'] != "SUCCESS")) {
+            //TODO失败,不是支付成功的通知
+            //如果有需要可以做失败时候的一些清理处理，并且做一些监控
+            $msg = "return_code 异常";
             return false;
         }
-        //查询订单，判断订单真实性
-        if (!$this->Queryorder($data["transaction_id"])) {
+        if(!array_key_exists("transaction_id", $data)){
+            $msg = "未获取到transaction_id";
+            return false;
+        }
+
+        // 2.进行签名验证
+        try {
+            $objData = new WxPayResults();
+            $objData->FromArray($data);
+            $checkResult = $objData->CheckSign();
+            if($checkResult == false){
+                //签名错误
+                Log::ERROR("签名错误...");
+                return false;
+            }
+        } catch(Exception $e) {
+            Log::ERROR(json_encode($e->getMessage()));
+        }
+
+        // 3.处理业务逻辑：查询订单，判断订单真实性
+        if(!$this->Queryorder($data["transaction_id"])){
             $msg = "订单查询失败";
             return false;
         }
         return true;
+
+
     }
 
 }
